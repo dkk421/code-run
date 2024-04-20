@@ -1,0 +1,78 @@
+#include <iostream>
+#include <deque>
+#include <set>
+#include <vector>
+typedef long long ll;
+
+class  Deque22
+{
+public:
+	std::vector<ll>ans;
+	Deque22(int k) { this->k = k; }
+
+	void Push(ll x, int i)
+	{
+		this->cur.push_back(x);
+		if (this->m.empty()) {
+			this->m.push_back(x);
+			return;
+		}
+		else {
+			Pop(x);
+			return;
+		}
+	}
+	void Pop(ll x) {
+		while (!this->m.empty()) {
+			if (this->m.back() > x) {
+				this->m.pop_back();
+			}
+			else { 
+				this->m.push_back(x); 
+				return;
+			}
+		}
+		this->m.push_back(x);
+	}
+
+
+	void PrintMin() { 
+		ans.push_back(this->m.front());
+		if (this->cur.front() == this->m.front()) {
+			this->m.pop_front();
+			this->cur.pop_front();
+		}
+		else {
+			this->cur.pop_front();
+		}
+		//this->m.pop_front();
+	}
+
+private:
+	std::deque<ll>deq;
+	std::deque<ll>cur;
+	std::deque<ll>m;
+	int k;
+};
+
+int main()
+{
+	int n, k;
+	std::cin >> n >> k;
+	Deque22 qq(k);
+	int i = 0;
+	while (n--) {
+		i++;
+		if (i > k) {
+			qq.PrintMin();
+			i--;
+		}
+		ll c;
+		std::cin >> c;
+		qq.Push(c, i);
+	}
+	qq.PrintMin();
+	for (ll x : qq.ans) {
+		std::cout << x << "\n";
+	}
+}
