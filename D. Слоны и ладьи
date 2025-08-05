@@ -1,0 +1,83 @@
+def b(chess_board,row,col):
+    # for i in range(1,9):  идём по строкам, в одной строке по две занятые клетки, пока j
+    _B = [row+1,col+1]
+    top_l = min(_B) - 1
+    top_r = min(_B[0],9-_B[1])-1
+    bottom_l = 8 - max(_B[0],9-_B[1])
+    bottom_r = 8 - max(_B)
+    for i in range(1,top_l+1):
+        if chess_board[row-i][col-i] not in 'RB': chess_board[row-i][col-i] = '+'
+        else: break
+    for i in range(1,top_r+1):
+        if chess_board[row-i][col+i] not in 'RB': chess_board[row-i][col+i] = '+'
+        else:
+            break
+    for i in range(1,bottom_r+1):
+        if chess_board[row+i][col+i] not in 'RB': chess_board[row+i][col+i] = '+'
+        else:
+            break
+    for i in range(1,bottom_l+1):
+        if chess_board[row+i][col-i] not in 'RB': chess_board[row+i][col-i] = '+'
+        else:
+            break
+    return chess_board
+
+def r(chess_board,row,col):
+    for i in range(row-1,-1,-1):
+        if chess_board[i][col] not in 'RB': chess_board[i][col] = '+'
+        else:
+            break
+    for i in range(row+1,8):
+        if chess_board[i][col] not in 'RB': chess_board[i][col] = '+'
+        else:
+            break
+    for i in range(col-1,-1,-1):
+        if chess_board[row][i] not in 'RB': chess_board[row][i] = '+'
+        else:
+            break
+    for i in range(col+1,8):
+        if chess_board[row][i] not in 'RB': chess_board[row][i] = '+'
+        else:
+            break
+    return chess_board
+
+
+B = [] # слоны
+R = [] # ладьи
+arr = [[0]*8]*8
+for i in range(8):
+    arr[i] = list(input())
+    if arr[i].count('R') >= 1:
+        for j in range(8):
+            if arr[i][j] == 'R': R.append([i+1, j+1])
+    if arr[i].count('B') >= 1:
+        for j in range(8):
+            if arr[i][j] == 'B': B.append([i+1, j+1])
+
+if (len(B)+len(R) == 0):
+    print(64)
+
+elif (len(B) > 0 and len(R) == 0):
+    k = 0
+    for n in B:
+        arr = b(arr, n[0]-1, n[1]-1)
+    for i in arr:
+        k += i.count("*")
+    print(k)
+
+elif (len(B)==0 and len(R) > 0):
+    k = 0
+    for n in R:
+        arr = r(arr, n[0] - 1, n[1] - 1)
+    for i in arr:
+        k += i.count("*")
+    print(k)
+else:
+    k = 0
+    for n in R:
+        arr = r(arr, n[0] - 1, n[1] - 1)
+    for n in B:
+        arr = b(arr, n[0] - 1, n[1] - 1)
+    for i in arr:
+        k += i.count("*")
+    print(k)
