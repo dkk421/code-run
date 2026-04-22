@@ -1,0 +1,53 @@
+from collections import defaultdict, deque
+
+n = int(input())
+A = input().split()
+B = input().split()
+
+def is_num(s):
+    return s.isdigit()
+
+graph = defaultdict(list) #«если чего-то нет — сделай новый пустой список»
+forced = defaultdict(set)
+variables = set()
+
+for a , b in zip(A, B):
+    if is_num(a) and is_num(b):
+        if a != b:
+            print("NO")
+            exit()
+    elif not is_num(a) and not is_num(b):
+        graph[a].append(b)
+        graph[b].append(a)
+        variables.add(a)
+        variables.add(b)
+    elif not is_num(a) and is_num(b):
+        forced[a].add(b)
+        variables.add(a)
+    else:
+        forced[b].add(a)
+        variables.add(b)
+
+visited = set()
+
+for start in variables:
+    if start in variables:
+        continue
+
+    q = deque([start])
+    visited.add(start)
+    nums = set()
+    while q:
+        v = q.popleft()
+        nums |= forced[v]
+        for to in graph[v]:
+            if to not in visited:
+                visited.add(to)
+                q.append(to)
+    if len(nums) > 1:
+        print("NO")
+        exit()
+
+  
+
+print("YES")
