@@ -1,0 +1,252 @@
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <utility>
+#include <cstdlib>
+#include <chrono>
+
+using std::cin;
+using std::cout;
+using std::vector;
+using std::pair;
+using std::min;
+using std::max;
+/*
+    использую декартово дерево, чтобы хранить мультимножество чисел
+    и быстро отвечать на запросы:
+    -сколько элементов <= x
+    -сумма элементов <= x
+
+    Это надо для вычисления:
+        sum |c_j - H|
+    где c_j = a_j + |i - j|
+*/
+struct Node {
+    long long key;
+    int prio;
+    int cnt;
+    int size;
+    long long sum;
+    Node* left;
+    Node* right;
+
+    Node(long long k)
+        : key(k),
+        prio(std::rand()),
+        cnt(1),
+        size(1),
+        sum(k),
+        left(nullptr),
+        right(nullptr) {}
+};
+// размер поддерева
+int sz(Node* t) {
+    return t ? t->size : 0; }
+// сумма поддерева
+long long sm(Node* t) {
+    return t ? t->sum : 0;
+}
+// обновить size и sum
+void upd(Node* t) {
+    if (t) {
+        t->size = t->cnt + sz(t->left) + sz(t->right);
+        t->sum = t->key * t->cnt + sm(t->left) + sm(t->right);
+    }
+}
+// правый поворот
+Node* rotate_right(Node* t) {
+    Node* x = t->left;
+    t->left = x->right;
+    x->right = t;
+    upd(t);
+    upd(x);
+    return x;
+}
+// левый поворот
+Node* rotate_left(Node* t) {
+    Node* x = t->right;
+    t->right = x->left;
+    x->left = t;
+    upd(t);
+    upd(x);
+    return x;
+}
+// вставка ключа
+Node* insert(Node* t, long long key) {
+    if (!t) return new Node(key);
+    if (key == t->key) {
+        t->cnt++;
+    }
+    else if (key < t->key) {
+        t->left = insert(t->left, key);
+        if (t->left->prio > t->prio)
+            t = rotate_right(t);
+    }
+    else {
+        t->right = insert(t->right, key);
+        if (t->right->prio > t->prio)
+            t = rotate_left(t);
+    }
+    upd(t);
+    return t;
+}
+// удаление одного вхождения ключа
+Node* erase(Node* t, long long key) {
+    if (!t) return nullptr;
+    if (key == t->key) {
+        if (t->cnt > 1) {
+            t->cnt--;
+        }
+        else {
+            if (!t->left) return t->right;
+            if (!t->right) return t->left;
+            // балансируем
+            if (t->left->prio > t->right->prio) {
+                t = rotate_right(t);
+                t->right = erase(t->right, key);
+            }
+            else {
+                t = rotate_left(t);
+                t->left = erase(t->left, key);
+            }
+        }
+    }
+    else if (key < t->key) {
+        t->left = erase(t->left, key);
+    }
+    else {
+        t->right = erase(t->right, key);
+    }
+    upd(t);
+    return t;
+}
+pair<long long, long long> count_sum_le(Node* t, long long x) {
+    if (!t) return { 0, 0 };
+    if (x < t->key) {
+        return count_sum_le(t->left, x);
+    }
+    pair<long long, long long> right_part = count_sum_le(t->right, x);
+    long long cnt = sz(t->left) + t->cnt + right_part.first;
+    long long sum = sm(t->left) + t->key * t->cnt + right_part.second;
+    return { cnt, sum };
+}
+
+int total_count(Node* t) {
+    return sz(t);
+}
+
+long long total_sum(Node* t) {
+    return sm(t);
+}
+
+int main() {
+    std::ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    std::srand(
+        static_cast<unsigned>(
+            std::chrono::steady_clock::now().time_since_epoch().count()
+            )
+    );
+
+    int n;
+    cin >> n;
+
+    vector<long long> a(n);
+    for (int i = 0; i < n; ++i) {
+        cin >> a[i];
+    }
+
+    /*
+        left  хранит значения (a[j] - j) для j < i
+        right хранит значения (a[j] + j) для j >= i
+
+        a[j] + |i - j| = {
+            (a[j] - j) + i   if j < i
+            (a[j] + j) - i   if j >= i }
+    */
+    Node* left = nullptr;
+    Node* right = nullptr;
+
+    for (int j = 0; j < n; ++j) {
+        right = insert(right, a[j] + j);
+    }
+
+    int total_n = n;
+    // границы для бинарного поиска по H (высоте вершины)
+    long long lo_global = *std::min_element(a.begin(), a.end()) - n - 5;
+    long long hi_global = *std::max_element(a.begin(), a.end()) + n + 5;
+
+
+    // сколько значений c_j <= H
+    auto count_le_actual = [&](long long H, int i) {
+        pair<long long, long long> p1 = count_sum_le(left, H - i);
+        pair<long long, long long> p2 = count_sum_le(right, H + i);
+        return p1.first + p2.first;
+    };
+// sum |c_j - H|
+    auto cost_actual = [&](long long H, int i) {
+        pair<long long, long long> p1 = count_sum_le(left, H - i);
+        // левая часть 
+        long long c1 = p1.first;
+        long long s1 = p1.second;
+       
+        long long total_c1 = total_count(left);
+        long long total_s1 = total_sum(left);
+        // сдвиг +i
+        long long sum_le_left = s1 + c1 * i;
+        long long total_sum_left = total_s1 + total_c1 * i;
+
+
+        // правая часть
+        pair<long long, long long> p2 = count_sum_le(right, H + i);
+        long long c2 = p2.first;
+        long long s2 = p2.second;
+
+        long long total_c2 = total_count(right);
+        long long total_s2 = total_sum(right);
+        // сдвиг -i
+        long long sum_le_right = s2 - c2 * i;
+        long long total_sum_right = total_s2 - total_c2 * i;
+
+        long long cnt_le = c1 + c2;
+        long long sum_le = sum_le_left + sum_le_right;
+
+        long long total_sum_all = total_sum_left + total_sum_right;
+        long long cnt_gt = total_n - cnt_le;
+        long long sum_gt = total_sum_all - sum_le;
+
+        // сумма модулей
+        return H * cnt_le - sum_le + sum_gt - H * cnt_gt;
+    };
+
+    long long ans = static_cast<long long>(1e30);
+    // перебор центра крыши
+    for (int i = 0; i < n; ++i) {
+        int k = (total_n + 1) / 2;
+
+        long long lo = lo_global;
+        long long hi = hi_global;
+
+        while (lo < hi) {
+            long long mid = (lo + hi) / 2;
+            if (count_le_actual(mid, i) >= k)
+                hi = mid;
+            else
+                lo = mid + 1;
+        }
+
+        long long median = lo;
+        long long min_H = 1 + max(i, n - 1 - i);
+        long long H = max(median, min_H);
+
+        ans = min(ans, cost_actual(H, i));
+
+        right = erase(right, a[i] + i);
+        left = insert(left, a[i] - i);
+    }
+
+    cout << ans << '\n';
+
+    return 0;
+}
